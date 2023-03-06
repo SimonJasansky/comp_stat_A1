@@ -11,8 +11,43 @@ library(tidyverse)
 ```
 
 
+# Load Data
+```{r, include=FALSE}
+library("tidyverse")
+library("ggplot2")
+a1_data <- read_csv("a1_data.csv")
+print(a1_data)
 
+ggplot(pivot_longer(a1_data, everything()), aes(value)) +
+geom_histogram(bins = 100) +
+facet_wrap(~name, nrow = 3)
+
+
+```
 ```{r}
+
+
+
 
 ```
 
+
+## Define the assumptions that you would like to make.
+- There is a causal relationship between the variables
+- The causal relationship (i.e. the graph) is acyclic and with no self-loops 
+
+If we use Park algorithm: 
+- model is additive noise model
+- $\epsilon_1$, $\epsilon_2$ etc. are independent, uniformly distributed with mean 0 and variance $\sigma^2$, and all of the epsilons have to have the same variance. 
+
+However, we cannot assume that the variables themselves are normally distributed! (e.g. look at variable D)
+
+
+## Develop a procedure to estimate the DAG from the data using your assumptions.
+
+
+
+
+## Implement your procedure in R or Python and report your DAG
+
+## Explain what the limits of your procedure are, both statistically and in terms of possible violations of your assumption with real world data
