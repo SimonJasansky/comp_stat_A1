@@ -1,0 +1,18 @@
+1. Defining the assumptions 
+We are assuming that in our directed graphs the variance of a node is at least as big as the variance of the one that it is directed from, plus some additional noise. This nois is independent and identically distributed with a mean zero and standard deviation sigma.
+
+We checked the distributions of our data and although at firs they seemed somewhat similar, the results of the Kolgomorov-Smirnov tests stated that they are of a different distributions. The correlation matrix tells us that there are not many significant correlations.
+
+2. Develop procedures to estimate the DAG from the data
+
+We tried two methods to create DAGs.
+
+First approach is a simple one. We took each of our variables one by one as the target variable and regressed them with all the other ones. Then we checked the significance of these connections. When the t-test suggested that the predictor variable has a significant affect on the target variable we established a connections. After creating a connectivity matrix, we tested the variances between the connected nodes with an F-test and by doing so, we succesfully identified the directions.
+
+No arrow between two nodes, if there is no significance.
+x -> y if variance of x is less than variance of y
+x <- y if variance of x is greater than variance of y.
+
+Although it can be desirable to include all of the variables when regressing there are some issues with it as well. We checked for multicollinearity and the amount was not significant but also not ideal.
+
+For the second approach we used the sortnregress method, which was introduced during the lecture. We hope to achieve better results by selecting the variables.
