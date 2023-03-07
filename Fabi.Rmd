@@ -1,0 +1,45 @@
+---
+title: "Comp stats Assignment 1"
+output: html_document
+date: "2023-03-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("readr")
+library("ggplot2")
+library("tidyr")
+library("psych")
+a1_data <- read_csv("a1_data.csv")
+a1_data
+```
+
+```{r}
+ks.test(a1_data$A,a1_data$B)
+```
+
+
+```{r}
+variables = list(variables)
+for (x in variables) {
+  
+}
+```
+
+```{r}
+fit = lm(A ~ . -1, a1_data)
+  p_values = summary(fit)$coefficients[,4]
+a_vector = ifelse(p_values < 0.05, 1, 0)
+summary(fit)
+print(a_vector)
+```
+
+
+```{r}
+pairs.panels(a1_data)
+```
+
+
