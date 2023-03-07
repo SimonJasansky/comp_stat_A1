@@ -1,0 +1,182 @@
+---
+title: "Comp stats Assignment 1"
+output: html_document
+date: "2023-03-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("readr")
+library("ggplot2")
+library("tidyr")
+library("psych")
+setwd('C:/UM/Computational_Statistics')
+data <- read_csv("a1_data.csv")
+```
+
+
+```{r}
+fit = lm(D ~ . , data)
+p_values = summary(fit)$coefficients[,4]
+a_vector = ifelse(p_values < 0.05, 1, 0)
+summary(fit)
+print(a_vector)
+
+
+```
+
+
+
+```{r}
+colnam = colnames(data)
+connections_vec = c()
+
+for (i in 1:11) {
+  variab = colnam[i]
+  fit = lm(paste(variab, "~ .", sep = " ") , data) # model building
+  p_values = summary(fit)$coefficients[,4] # p_vale extract
+  con_vec = as.vector(ifelse(p_values < 0.05, 1, 0)) #significant or not
+  connections = append(con_vec, 0, i) #0 to own place
+  connections = connections[2:12] #taking out intercept
+  connections_vec = append(connections_vec,connections) # appending to one vector
+} 
+
+
+M = matrix(connections_vec, 11, 11, byrow = T, dimnames = list(paste(colnam, "_from", sep = ""),paste(colnam, "_to", sep = "")))
+
+
+directions = data.frame(M)
+
+
+print("both ways")
+print(directions)
+
+
+
+for (r in 1:10){
+  for (c in (r+1):11){
+    
+    vartest = var.test(unlist(data[r]), unlist(data[c]), alternative = "greater")
+    
+    if (0.05>vartest$p.value) {
+      directions[r,c] = 0
+    } else {
+      directions[c,r] = 0
+    }
+  }
+}
+
+print("one way")
+print(directions)
+
+
+```
+
+
+```{r}
+#pairs.panels(a1_data)
+
+direc_with_good_names = directions
+colnames(direc_with_good_names) = colnames(data)
+row.names(direc_with_good_names) = colnames(data)
+
+for_graph = as.matrix(direc_with_good_names)
+
+g = graph.adjacency(for_graph)
+```
+
+
+
+```{r}
+plot.igraph(g,
+            main = "GeriGraph",
+            vertex.size = 28,
+            vertex.color = "gray",
+            vertex.frame.width = 1.75,
+            label = colnames(data),
+            vertex.label.color = "black",
+            vertex.label.font = 1,
+            vertex.label.cex = 1.1,
+            edge.color = "black",
+            edge.arrow.size = 0.5,
+            edge.width = 1.5,
+            layout = matrix(c(0,-10,-5,-8,-9,-4,-10,1,-8,7,-3,10,3,10,8,7,10,1,9,-4,5,-8), nrow = 11, ncol = 2, byrow = T))
+
+
+```
+
+```{r}
+library(readxl)
+SimonData = read_csv("C:/UM/Computational_Statistics/graph.csv")
+
+SimonData = SimonData[2:12]
+
+SimonData = ifelse(SimonData == 0, 0, 1)
+
+SimonGraph = graph.adjacency(SimonData)
+
+plot.igraph(SimonGraph,
+            main = "SimonGraph",
+            vertex.size = 28,
+            vertex.color = "gray",
+            vertex.frame.width = 1.75,
+            label = colnames(data),
+            vertex.label.color = "black",
+            vertex.label.font = 1,
+            vertex.label.cex = 1.1,
+            edge.color = "black",
+            edge.arrow.size = 0.5,
+            edge.width = 1.5,
+            layout = matrix(c(0,-10,-5,-8,-9,-4,-10,1,-8,7,-3,10,3,10,8,7,10,1,9,-4,5,-8), nrow = 11, ncol = 2, byrow = T))
+
+
+```
+
+
+```{r}
+difference = as.matrix(SimonData) - as.matrix(direc_with_good_names)
+sum(abs(difference))
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot.igraph(g,
+            main = "Graph from simple regressions",
+            vertex.size = 28,
+            vertex.color = "gray",
+            vertex.frame.width = 1.75,
+            label = colnames(data),
+            vertex.label.color = "black",
+            vertex.label.font = 1,
+            vertex.label.cex = 1.1,
+            edge.color = "black",
+            edge.arrow.size = 0.5,
+            edge.width = 1.5,
+            layout = matrix(c(0,-10,-5,-8,-9,-4,-10,1,-8,7,-3,10,3,10,8,7,10,1,9,-4,5,-8), nrow = 11, ncol = 2, byrow = T))
+plot.igraph(SimonGraph,
+            main = "Graph from sortnregress",
+            vertex.size = 28,
+            vertex.color = "gray",
+            vertex.frame.width = 1.75,
+            label = colnames(data),
+            vertex.label.color = "black",
+            vertex.label.font = 1,
+            vertex.label.cex = 1.1,
+            edge.color = "black",
+            edge.arrow.size = 0.5,
+            edge.width = 1.5,
+            layout = matrix(c(0,-10,-5,-8,-9,-4,-10,1,-8,7,-3,10,3,10,8,7,10,1,9,-4,5,-8), nrow = 11, ncol = 2, byrow = T))
+
+```
+
+
+
+
+
+
+
+
+
