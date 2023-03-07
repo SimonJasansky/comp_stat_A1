@@ -25,21 +25,31 @@ facet_wrap(~name, nrow = 3)
 ```
 
 
-
-
-
 ## Define the assumptions that you would like to make.
+First it must be noted that we test two different approaches, both of which rely on the same assumptions, which are:  
 - There is a causal relationship between the variables
-- The causal relationship (i.e. the graph) is acyclic and with no self-loops 
+- The causal relationship(s) (i.e. the graph) are acyclic and with no self-loops 
+- the model is an additive noise model, i.e. the variance of a node is at least as big as the variance of the one that it is directed from, plus some additional noise $\epsilon_i$. This noise $\epsilon_i$ is independent and identically distributed with a mean \0 and standard deviation $\sigma$
+- 
 
-If we use Park algorithm: 
-- model is additive noise model
-- $\epsilon_1$, $\epsilon_2$ etc. are independent, uniformly distributed with mean 0 and variance $\sigma^2$, and all of the epsilons have to have the same variance. 
-
-However, we cannot assume that the variables themselves are normally distributed! (e.g. look at variable D)
+Maybe include: 
+After checking the distributions of our data and although at first they seemed somewhat similar, the results of the Kolgomorov-Smirnov tests stated that they are of a different distributions. The correlation matrix tells us that there are not many significant correlations.
 
 
 ## Develop a procedure to estimate the DAG from the data using your assumptions.
+
+We tried two methods to create DAGs.
+
+First approach is a simple one. We took each of our variables one by one as the target variable and regressed them with all the other ones. Then we checked the significance of these connections. When the t-test suggested that the predictor variable has a significant affect on the target variable we established a connections. After creating a connectivity matrix, we tested the variances between the connected nodes with an F-test and by doing so, we succesfully identified the directions.
+
+No arrow between two nodes, if there is no significance.
+x -> y if variance of x is less than variance of y
+x <- y if variance of x is greater than variance of y.
+
+Although it can be desirable to include all of the variables when regressing there are some issues with it as well. We checked for multicollinearity and the amount was not significant but also not ideal.
+
+For the second approach we used the sortnregress method, which was introduced during the lecture. We hope to achieve better results by selecting the variables.
+
 
 ```{r}
 # test the procedure: ranking by variance and then do pairwise correlation tests:
@@ -56,10 +66,9 @@ variances_df %>% arrange(variance, decreasing = TRUE)
 ```
 
 
-
 ## Implement your procedure in R or Python and report your DAG
 
-
+include here some notes about the approach
 
 
 ## Explain what the limits of your procedure are, both statistically and in terms of possible violations of your assumption with real world data
