@@ -46,7 +46,8 @@ After checking the distributions of our data and although at first they seemed s
 We tested two methods to create DAGs.
 
 ## First Method: Brute force regression
-The first approach is a simple one. We took each of our variables one by one as the target variable and regressed them with all the other ones. 
+
+The first approach is a simple one. In the first step, we took a simpler but insightful approach to see the data clearly and determine the appropriate approach. For that reason, we took each of our variables one by one as the target variable and regressed them with all the other ones. 
 
 
 Then we checked the significance of these connections by checking the p-values (significant if p-value < 0.05). When the t-test suggested that the predictor variable has a significant effect on the target variable, we established a connections. After creating a connectivity matrix, we tested the variances between the connected nodes with an F-test and by doing so, we identified the directions with the following method: 
@@ -230,7 +231,13 @@ plot.igraph(SimonGraph,
 
 ```
 
-The are similar in most nodes and edges, but do have differences... (tbc)
+The are similar in most nodes and edges, but do have differences. 
+
+As seen in DAG, the are similar common results in most nodes and edges in the two methods. There are 11 edge differences in total between the two analysis and these differences mean 10% in all data set. While 5 nodes which are D,E,F,J and K gave exactly the same results, 1 or 2 edge differences were observed in the other 6 nodes that are A,B,C,G,H and I. 
+
+![image](https://user-images.githubusercontent.com/47392985/223721759-5cf3d171-8284-4140-8744-13f9d8ee6280.png)
+
+As seen in DAG, the are similar common results in most nodes and edges in the two methods. There are 11 edge differences in total between the two analysis and these differences mean 10% in all data set. While 5 nodes which are D,E,F,J and K gave exactly the same results, 1 or 2 edge differences were observed in the other 6 nodes that are A,B,C,G,H and I. 
 
 # Explain what the limits of your procedure are, both statistically and in terms of possible violations of your assumption with real world data
 
