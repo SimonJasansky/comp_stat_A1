@@ -49,14 +49,13 @@ We tested two methods to create DAGs.
 
 The first approach is a simple one. In the first step, we took a simpler but insightful approach to see the data clearly and determine the appropriate approach. For that reason, we took each of our variables one by one as the target variable and regressed them with all the other ones. 
 
-
 Then we checked the significance of these connections by checking the p-values (significant if p-value < 0.05). When the t-test suggested that the predictor variable has a significant effect on the target variable, we established a connections. 
 
 After creating a connectivity matrix, we tested the variances between the connected nodes with an F-test and by doing so, we identified the directions with the following method: 
 
-* No arrow between two nodes, if there is no significance.
-* x -> y if variance of x is less than variance of y
-* x <- y if variance of x is greater than variance of y.
+* No arrow between two nodes, if there is no significance. (meanin no influence between x and y)
+* x -> y if variance of x is less than variance of y. (meanin x influence y)
+* x <- y if variance of x is greater than variance of y. (meanin y influence x)
 
 Although it can be desirable to include all of the variables when regressing there are some issues with it as well, which will be discussed in the limitations. We checked for multicollinearity and the amount was not significant but also not ideal. This method closely follows the method proposed in @Park, with some deviations. 
 
@@ -70,7 +69,6 @@ In detail, a first a linear regression is performed to get the coefficients. Aft
 Lasso Regression: Lasso is short for Least Absolute Shrinkage and Selection Operator, which is used both for regularization and model selection. 
 
 L_{Lasso}\left(\beta\right)=\sum_{i=1}^n\ ({y_i+\ x_i^\prime\hat{\beta})}^2+\ \lambda\sum_{J=1}^{m}\left|\widehat{\beta_j}\right|\ 
-
 
 # Implement your procedure in R or Python and report your DAG
 
@@ -242,9 +240,9 @@ The are similar in most nodes and edges, but do have differences.
 
 As seen in DAG, the are similar common results in most nodes and edges in the two methods. There are 11 edge differences in total between the two analysis and these differences mean 10% in all data set. While 5 nodes which are D,E,F,J and K gave exactly the same results, 1 or 2 edge differences were observed in the other 6 nodes that are A,B,C,G,H and I. 
 
-The most important reason for these differences is the relationship of the selected node with the other one in the first method, while the varryance between the two nodes is taken into account (F-test), in the second method, firstly, the variance order of the variables is made and then linear regression analysis is performed with those with a smaller variance (LASSO Regression).
+The most important reason for these, in the first method differences is the relationship of the selected node with the other one , while the varryance between the two nodes is taken into account (F-test), in the second method, firstly, the variance order of the variables is made and then linear regression analysis is performed with those with a smaller variance (LASSO Regression).
 
-
+The key difference in the two analyzes is in the edges coming to the E and G nodes. While in the first approach there were more incoming edges to the E node - the total incoming edge was 6, in the second approach it reduced to 3. On the other hand, while the edges coming to the G node were 3 in the first approach, it increased to 6 in the sortnregress approach. The signaficant reason for this is the moment of processing the variance while creating the loops, as mentioned before. In the first approach, the variance between the two nodes was examined, in the second approach, the variances were listed and operations were performed.
 
 
 # Explain what the limits of your procedure are, both statistically and in terms of possible violations of your assumption with real world data
