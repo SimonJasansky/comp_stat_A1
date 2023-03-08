@@ -50,7 +50,9 @@ We tested two methods to create DAGs.
 The first approach is a simple one. In the first step, we took a simpler but insightful approach to see the data clearly and determine the appropriate approach. For that reason, we took each of our variables one by one as the target variable and regressed them with all the other ones. 
 
 
-Then we checked the significance of these connections by checking the p-values (significant if p-value < 0.05). When the t-test suggested that the predictor variable has a significant effect on the target variable, we established a connections. After creating a connectivity matrix, we tested the variances between the connected nodes with an F-test and by doing so, we identified the directions with the following method: 
+Then we checked the significance of these connections by checking the p-values (significant if p-value < 0.05). When the t-test suggested that the predictor variable has a significant effect on the target variable, we established a connections. 
+
+After creating a connectivity matrix, we tested the variances between the connected nodes with an F-test and by doing so, we identified the directions with the following method: 
 
 * No arrow between two nodes, if there is no significance.
 * x -> y if variance of x is less than variance of y
@@ -61,8 +63,13 @@ Although it can be desirable to include all of the variables when regressing the
 ## Second method: sortnregress
 
 For the second approach we used the sortnregress method, which was introduced during the lecture and is based on @Reisach2021BewareOT. To summarize the approach, with sortnregress the variables are initially ranked by their variances, from lowest to highest variance. As we assume an additive noise model, a variable that is influenced by another variable must have at least the noise of the variable that it is influenced by, plus some additional noise. 
-Then, each variable is linearly regressed on all the other variables having lower variance than the variable itself. In detail, a first a linear regression is performed to get the coefficients. After that, a LASSO regression is performed, where the regressors are multiplied by the absolute value of the coefficients of the linear regression, making variables that have only a small effect in the linear regression even smaller in the LASSO regression. The LASSO regression lets coefficients for less important variables go to zero, having the effect of pruning connections between variables in the DAG.
+Then, each variable is linearly regressed on all the other variables having lower variance than the variable itself. 
 
+In detail, a first a linear regression is performed to get the coefficients. After that, a LASSO regression is performed, where the regressors are multiplied by the absolute value of the coefficients of the linear regression, making variables that have only a small effect in the linear regression even smaller in the LASSO regression. The LASSO regression lets coefficients for less important variables go to zero, having the effect of pruning connections between variables in the DAG.
+
+Lasso Regression: Lasso is short for Least Absolute Shrinkage and Selection Operator, which is used both for regularization and model selection. 
+
+L_{Lasso}\left(\beta\right)=\sum_{i=1}^n\ ({y_i+\ x_i^\prime\hat{\beta})}^2+\ \lambda\sum_{J=1}^{m}\left|\widehat{\beta_j}\right|\ 
 
 
 # Implement your procedure in R or Python and report your DAG
@@ -235,9 +242,10 @@ The are similar in most nodes and edges, but do have differences.
 
 As seen in DAG, the are similar common results in most nodes and edges in the two methods. There are 11 edge differences in total between the two analysis and these differences mean 10% in all data set. While 5 nodes which are D,E,F,J and K gave exactly the same results, 1 or 2 edge differences were observed in the other 6 nodes that are A,B,C,G,H and I. 
 
-![image](https://user-images.githubusercontent.com/47392985/223721759-5cf3d171-8284-4140-8744-13f9d8ee6280.png)
+The most important reason for these differences is the relationship of the selected node with the other one in the first method, while the varryance between the two nodes is taken into account (F-test), in the second method, firstly, the variance order of the variables is made and then linear regression analysis is performed with those with a smaller variance (LASSO Regression).
 
-As seen in DAG, the are similar common results in most nodes and edges in the two methods. There are 11 edge differences in total between the two analysis and these differences mean 10% in all data set. While 5 nodes which are D,E,F,J and K gave exactly the same results, 1 or 2 edge differences were observed in the other 6 nodes that are A,B,C,G,H and I. 
+
+
 
 # Explain what the limits of your procedure are, both statistically and in terms of possible violations of your assumption with real world data
 
