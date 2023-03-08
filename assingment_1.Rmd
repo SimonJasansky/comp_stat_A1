@@ -236,7 +236,7 @@ The are similar in most nodes and edges, but do have differences... (tbc)
 
 The DAG procedure assumes that there is a causal relationship between the variables, that the causal relationship is acyclic and has no self-loops, and that the errors follow an additive noise model with uniform, independent errors. Violations of these assumptions can lead to biased estimates of the causal relationships. 
 	
-The DAG procedure assumes that the causal direction is known and that the causal ordering is correct. In practice, it was difficult to determine the correct causal ordering, and it may be necessary to use multiple methods to identify the causal direction.
+And also these assumtions have the causal direction is known and that the causal ordering is correct. In practice, it was difficult to determine the correct causal ordering, and it may be necessary to use multiple methods to identify the causal direction.
 
 Given identifiability condition could be very restrictive, even if it is very general version of the conditions for linear structural equation models (SEMs).
 	
