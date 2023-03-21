@@ -1,0 +1,91 @@
+---
+title: "Assignment 1"
+author: "Akos Engelmann, Gergely Paradi, Fabian Gallyas, Ipek Cakin, Simon Jasansky"
+date: "2023-03-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("tidyverse")
+library("ggplot2")
+
+```
+
+
+# Load Data
+```{r, include=FALSE}
+a1_data <- read_csv("a1_data.csv")
+print(a1_data)
+
+ggplot(pivot_longer(a1_data, everything()), aes(value)) +
+geom_histogram(bins = 100) +
+facet_wrap(~name, nrow = 3)
+
+```
+
+
+## Define the assumptions that you would like to make.
+First it must be noted that we test two different approaches, both of which rely on the same assumptions, which are:  
+- There is a causal relationship between the variables
+- The causal relationship(s) (i.e. the graph) are acyclic and with no self-loops 
+- the model is an additive noise model, i.e. the variance of a node is at least as big as the variance of the one that it is directed from, plus some additional noise $\epsilon_i$. This noise $\epsilon_i$ is independent and identically distributed with a mean \0 and standard deviation $\sigma$
+- 
+
+Maybe include: 
+After checking the distributions of our data and although at first they seemed somewhat similar, the results of the Kolgomorov-Smirnov tests stated that they are of a different distributions. The correlation matrix tells us that there are not many significant correlations.
+
+
+## Develop a procedure to estimate the DAG from the data using your assumptions.
+
+We tried two methods to create DAGs.
+
+First approach is a simple one. We took each of our variables one by one as the target variable and regressed them with all the other ones. Then we checked the significance of these connections. When the t-test suggested that the predictor variable has a significant affect on the target variable we established a connections. After creating a connectivity matrix, we tested the variances between the connected nodes with an F-test and by doing so, we succesfully identified the directions.
+
+No arrow between two nodes, if there is no significance.
+x -> y if variance of x is less than variance of y
+x <- y if variance of x is greater than variance of y.
+
+Although it can be desirable to include all of the variables when regressing there are some issues with it as well. We checked for multicollinearity and the amount was not significant but also not ideal.
+
+For the second approach we used the sortnregress method, which was introduced during the lecture. We hope to achieve better results by selecting the variables.
+
+
+```{r}
+# test the procedure: ranking by variance and then do pairwise correlation tests:
+
+variances <- a1_data %>% summarise(var)
+variances
+
+as.numeric(variances[1,])
+
+variances_df = tibble("vars" = variances %>% names(), "variance" = as.numeric(variances[1,]))
+
+variances_df %>% arrange(variance, decreasing = TRUE)
+
+```
+
+
+## Implement your procedure in R or Python and report your DAG
+
+include here some notes about the approach
+
+
+## Explain what the limits of your procedure are, both statistically and in terms of possible violations of your assumption with real world data
+
+The DAG procedure assumes that there is a causal relationship between the variables, that the causal relationship is acyclic and has no self-loops, and that the errors follow an additive noise model with uniform, independent errors. Violations of these assumptions can lead to biased estimates of the causal relationships. 
+	
+The DAG procedure assumes that the causal direction is known and that the causal ordering is correct. In practice, it was difficult to determine the correct causal ordering, and it may be necessary to use multiple methods to identify the causal direction.
+
+Given identifiability condition could be very restrictive, even if it is very general version of the conditions for linear structural equation models (SEMs).
+	
+Additionally, Additive Noise Models (ANMs) are statistical consistency of learning non-linear have been not provided yet.
+
+The DAG procedure can identify correlations between variables, but it does not necessarily identify causal relationships. Careful interpretation of the results is necessary to determine whether the relationships identified by the DAG procedure are truly causal.
+
+Furthermore, Real-world data often includes confounding variables, which can complicate the estimation of causal relationships. And also, the assumptions of the DAG procedure may not hold for all types of data, such as data that include discrete variables or time-varying relationships.
+
+Reference:
+Park, Gunwoong. 2020. “Identifiability of Additive Noise Models Using Conditional Variances.” Journal of Machine Learning Research 21 (75): 1–34. http://jmlr.org/papers/v21/19-664.html.
+
+
