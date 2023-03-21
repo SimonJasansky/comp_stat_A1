@@ -22,6 +22,8 @@ law %<>% add_column(observation = 1:nrow(law), .before = 1)
 ggplot(law, aes(x = LSAT, y = GPA)) +
 geom_text(aes(label = observation),
 hjust = 0, vjust = 0)
+
+print(law)
 ```
 
 
@@ -65,7 +67,7 @@ n = 15
 comps = partitions::compositions(n,n)
 
 # it returns all possible compositions in the columns
-comps[,1:20]
+comps[,1:5]
 
 # check how many compositions there are 
 comp_len = dim(comps)[2]
@@ -165,5 +167,30 @@ print(c("Estimated hours to run the whole sample: ", toString(est_time_h)))
 output = t(simplify2array(output))
 colnames(output) = c("cor","weight")
 save(output, file = "law_enum_corr.Rdata")
+
+```
+
+Then, do the actual implementation of the exhaustive enumeration WITH parallelizing
+
+```{r, echo = FALSE}
+# TBD!
+```
+
+
+Run the exhaustive enumeration with the help of grey codes
+
+```{r, echo = FALSE}
+
+# check if the compositions only differ in one place
+comps[,1:10]
+
+sum(abs(comps[,1] - comps[,2]))
+
+sum_abs = c()
+for(i in c(1:100)){
+  sum_abs = c(sum_abs, sum(abs(comps[,i] - comps[,i+1])))
+}
+sum_abs
+# they dont differ in only one place, so we cant use it
 
 ```
