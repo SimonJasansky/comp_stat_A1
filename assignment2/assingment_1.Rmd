@@ -11,10 +11,12 @@ library("tidyverse")
 library("ggplot2")
 library("bootstrap")
 library("magrittr")
+
 ```
 
 
-```{r}
+```{r, echo = FALSE}
+# visualize the data
 data(law)
 law %<>% add_column(observation = 1:nrow(law), .before = 1)
 ggplot(law, aes(x = LSAT, y = GPA)) +
@@ -24,3 +26,144 @@ hjust = 0, vjust = 0)
 
 
 
+# Task 0: Do the vanilla bootstrap for the distribution of the pearson correlation coefficient 
+```{r, echo = FALSE}
+
+# calculate the correlation between the data for the original dataframe
+cor(law$GPA, law$LSAT)
+
+# function takes in a dataframe (in our case the law dataframe)
+boot <- function(x) {
+  # generate a list of 15 integers, that are between 1 and 15 (randomly)
+  ids <- sample(nrow(law), replace = TRUE)
+  # calculate the correlation when selecting the rows as given in ids
+  cor <- cor(law[ids,]$GPA, law[ids,]$LSAT)
+  #return the correlation coefficient
+  cor
+}
+
+# apply it only once on the original dataframe
+print(boot(law))
+
+cor_dist_boot <- replicate(40000, boot(law$LSAT))
+hist(cor_dist_boot)
+
+```
+
+
+# Task 1: Do the bootstrap with exhaustive enumeration 
+
+Get get a dataframe with all the possible combinations
+Code inspired by: https://christofseiler.github.io/stats205/Lecture5/BootstrapPart2.html#1 
+
+```{r, echo = FALSE}
+# install.packages("partitions")
+library("partitions")
+
+# define the length of our sequence
+n = 15
+comps = partitions::compositions(n,n)
+
+# it returns all possible compositions in the columns
+comps[,1:20]
+
+# check how many compositions there are 
+comp_len = dim(comps)[2]
+
+# check if true
+dim(comps)[2] == choose(2*n-1,n-1)
+dim(comps)[2] == factorial(29)/(factorial(15)*factorial(14))
+
+```
+
+
+Get an understanding how we can build a function by running the most simple example by taking the third column of the comps dataframe 
+```{r, echo = FALSE}
+
+# define the third column of the composition as test
+indices = comps[,3]
+
+# define the function that is used inside the bootstrap function
+# it creates a list of length 15, where the nth element contains i row of the original data x times, as specified in comps
+create_law_list = function(j) {
+  matrix(rep(law[j,], indices[j]), ncol = 2, byrow = TRUE)
+}
+
+create_law_list(1)
+test_list = lapply(1:n, create_law_list)
+test_list
+# so the inner_function returns a list of matrices
+# each element in the list, i.e. each matrix, contains as many observations of row 1-15 as specified in comps
+
+# collapse the list into one matrix with as many observations of each row as specified in comps
+l_list_new_test = do.call(rbind, test_list)
+l_list_new_test
+
+# calculate correlation between the columns
+correlation = cor(unlist(l_list_new_test[,1]), unlist(l_list_new_test[,2]))
+
+# calculate the weight for each correlation, which corresponds to the probability of observing this exact set by random chance. 
+# This is comparable to a roll of two fair dice, where rolling the sum of 3 is more likely (2/36) than the sum of 2 (1/36)
+dmultinom(indices, prob = rep(1,15))
+
+```
+
+
+Then, do the actual implementation of the exhaustive enumeration without parallelizing
+
+```{r, echo = FALSE}
+
+### define function for bootstrap ### 
+
+# i here is each column of the composition matrix
+bootstrap = function(i) {
+  # access the ith column of the composition matrix
+  indices = comps[,i]
+
+  # apply the numbers 1 to 15 as the j input to the inner function
+  # this returns a list of matrices with as many obs. as specified in comps
+  law_list = lapply(1:15, create_law_list)
+  
+  # this collapses the list into one matrix
+  law_matrix = do.call(rbind, law_list)
+  
+  # calculate the correlation between the two columns
+  correlation = cor(unlist(law_matrix[,1]), unlist(law_matrix[,2]))
+  
+  # output the correlation and the weight
+  # the weight is calculated by the multinomial probability of observing this set of the index
+  c(correlation, dmultinom(indices, prob = rep(1,15)))
+}
+
+### run the bootstrap ###
+
+# define on how many of the combinations you want to run it
+# if you run it on the total amount of combinations, it will take very long!
+# if fraction_of_len = 0.01, it will run on 1% of the data only. 
+fraction_of_len = 0.0001
+n_combinations = round(comp_len*fraction_of_len)
+print(n_combinations)
+
+# track present time 
+start_time = proc.time()
+
+# run the boostrap
+output = lapply(1:n_combinations, bootstrap)
+
+# track end time
+end_time = proc.time()
+
+time = end_time - start_time
+time = time[3]
+
+est_time_sec = time * (1/fraction_of_len)
+est_time_h = est_time_sec/(60*60)
+
+print(c("Estimated hours to run the whole sample: ", toString(est_time_h)))
+
+
+output = t(simplify2array(output))
+colnames(output) = c("cor","weight")
+save(output, file = "law_enum_corr.Rdata")
+
+```
