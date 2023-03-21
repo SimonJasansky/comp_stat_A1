@@ -1,0 +1,26 @@
+---
+title: "Comp Stat - Assignment 2"
+author: "Akos Engelmann, Gergely Paradi, Fabian Gallyas, Ipek Cakin, Simon Jasansky"
+date: "2023-03-21"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("tidyverse")
+library("ggplot2")
+library("bootstrap")
+library("magrittr")
+```
+
+
+```{r}
+data(law)
+law %<>% add_column(observation = 1:nrow(law), .before = 1)
+ggplot(law, aes(x = LSAT, y = GPA)) +
+geom_text(aes(label = observation),
+hjust = 0, vjust = 0)
+```
+
+
+
