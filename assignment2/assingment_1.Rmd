@@ -93,26 +93,24 @@ create_law_list = function(j) {
 
 create_law_list(1)
 test_list = lapply(1:n, create_law_list)
-test_list
 # so the inner_function returns a list of matrices
 # each element in the list, i.e. each matrix, contains as many observations of row 1-15 as specified in comps
 
 # collapse the list into one matrix with as many observations of each row as specified in comps
 l_list_new_test = do.call(rbind, test_list)
-l_list_new_test
 
 # calculate correlation between the columns
 correlation = cor(unlist(l_list_new_test[,1]), unlist(l_list_new_test[,2]))
 
 # calculate the weight for each correlation, which corresponds to the probability of observing this exact set by random chance. 
 # This is comparable to a roll of two fair dice, where rolling the sum of 3 is more likely (2/36) than the sum of 2 (1/36)
+# see https://statweb.stanford.edu/~cgates/PERSI/papers/graycodes.pdf section 3 for why we have to append the probability/weight 
 dmultinom(indices, prob = rep(1,15))
 
 ```
 
 
-Then, do the actual implementation of the exhaustive enumeration without parallelizing
-
+Do the actual implementation of the exhaustive enumeration without parallelizing
 ```{r, echo = FALSE}
 
 ### define function for bootstrap ### 
@@ -170,15 +168,13 @@ save(output, file = "law_enum_corr.Rdata")
 
 ```
 
-Then, do the actual implementation of the exhaustive enumeration WITH parallelizing
-
+Do the implementation of the exhaustive enumeration WITH parallelizing
 ```{r, echo = FALSE}
 # TBD!
 ```
 
 
 Run the exhaustive enumeration with the help of grey codes
-
 ```{r, echo = FALSE}
 
 # check if the compositions only differ in one place
@@ -194,3 +190,246 @@ sum_abs
 # they dont differ in only one place, so we cant use it
 
 ```
+
+
+Cleaned code for creating gray codes for combinations
+Adapted from https://statweb.stanford.edu/~cgates/PERSI/papers/graycodes.pdf 
+```{r}
+
+# gray is the function that will be called multiple times
+# x is the current pi
+# point is the (d,i,p) vector of three pointers
+gray <- function(x = 0, n = sum(x), 
+                 k = len(x), point = c(0, 0, 0)) {
+  
+  # if x is a list, extract the point 
+  # probably can be deleted
+  if (is.list(x)) {
+    point <- x$point
+    x <- x$x
+  }
+  
+  # set the final variable to false
+  final <- FALSE
+  
+# 1. Tour
+  if (sum(x) == 0) {
+    x <- c(n, rep(0, k - 1))
+    point <- c(1, 2, 1)
+    return(list(x = x, point = point, final = final))
+  }
+  
+# finished
+  if (x[k] == n) {
+    stop("alreadylast")
+  }
+  
+  if (point[3] == 1) {
+    b <- which(x != 0)[2] #might not work
+    
+    if (is.na(b)) b <- 2
+    
+    if (b == 2) {
+      if((point[1] == 1) && (x[1] == 1)){
+        point <- c(1,2,2)
+      }
+    }
+    
+    # dont forget i 
+    else {
+      if (((n - x[1]) %% 2) == 0) {
+        point <- c(1, 2 ,2)
+      } else if ((x[b] %% 2) == 1) {
+        point <- c(1, b, b)
+      } else {
+        point[1:2] <- c(b, 1)
+      }
+    }
+  # end of case b==2
+  }
+  else {
+    # end of case p==1
+    if (((n - x[point[3]]) %% 2) == 1) {
+      point[1:2] <- c(point[3], point[3] - 1)
+      if ((x[point[3]] %% 2) == 0) {
+        point[2] <- 1
+        point[3] <- point[2]
+      }
+    }
+    else {
+      if (((x[point[3] + 1]) %% 2) == 0) {
+        point[1:2] <- c(point[3], point[3] + 1)
+        if (x[point[3]] == 1) {point[3] <- point[3] + 1}
+      }
+      else {
+        point[1:2] <- c(point[3] + 1, point[3])
+      }
+    }
+  }
+  x[point[2]] <- x[point[2]]+1
+  x[point[1]] <- x[point[1]]-1
+  if(x[1]>0) point[3]<-1
+  if(x[k] == n) final <- TRUE
+  return(list(x = x, point = point, final = final))
+  
+}
+
+
+
+callgray <- function(n = 5, k = 5, point = c(0, 0, 0), x = 0, pasapas = FALSE) {
+  
+  rows <- choose(2*n-1,n-1)
+  
+    # Initializes the progress bar
+  pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
+                       max = rows, # Maximum value of the progress bar
+                       style = 3,    # Progress bar style (also available style = 1 and style = 2)
+                       width = 50,   # Progress bar width. Defaults to getOption("width")
+                       char = "=")   # Character used to create the bar
+
+  
+  bi <- matrix(0, nrow = rows, ncol = n)
+  final <- FALSE
+  i <- 1
+  while (!final) {
+    setTxtProgressBar(pb, i)
+    #print(round(i/rows*100))
+    x <- gray(x, n, k, point)
+    bi[i, ] <- x$x
+    # print(bi)
+    i <- i + 1
+    final <- x$final
+    if(pasapas) {
+      rep <- scan(n=1)
+      if(length(rep)>0)
+        break
+    }
+  }
+  print("finished")
+  return(bi)
+}
+```
+
+
+Run the algorithm and create the grey codes for combinations
+```{r}
+if(!file.exists("graycodes_15.Rdata")) {
+graycodes_15 = callgray(n = 15, k = 15, point = c(0, 0, 0), x = 0)
+save(graycodes_15, file = "graycodes15.Rdata")
+} else {
+  load("graycodes15.Rdata")
+}
+```
+
+
+Run the correlation with the gray code combination
+This should be faster
+```{r}
+#exact formulation is from : https://stats.stackexchange.com/questions/410468/online-update-of-pearson-coefficient
+
+
+n = dim(graycodes_15)[1]
+
+# create first sample
+create_sample = function(j) {
+  matrix(rep(law[j,], indices[j]), ncol = 2, byrow = TRUE)
+}
+
+indices = graycodes_15[1,] 
+test_list = lapply(1:15, create_sample)
+sample = do.call(rbind, test_list)
+sample = data.frame(matrix(c(unlist(sample[,1]), 
+                             unlist(sample[,2])), 
+                           ncol = 2, byrow = F))
+
+# initialize all the values
+x = sum(sample$X1)
+y = sum(sample$X2)
+a = sum(sample$X1**2)
+b = sum(sample$X2**2)
+c = sum(sample$X1*sample$X2)
+  
+correlation = (c-x*y/n)/(sqrt(a-x**2/n)*sqrt(b-y**2/n))
+
+corr_list = list()
+corr_list = c(corr_list, c(correlation, dmultinom(indices, prob = rep(1,15))))
+
+
+
+# Initializes the progress bar
+pb <- txtProgressBar(min = 2,      # Minimum value of the progress bar
+                     max = dim(graycodes_15)[1], # Maximum value of the progress bar
+                     style = 3,    # Progress bar style (also available style = 1 and style = 2)
+                     width = 50,   # Progress bar width. Defaults to getOption("width")
+                     char = "=")   # Character used to create the bar
+
+
+
+# track present time 
+start_time = proc.time()
+
+
+# define on how many of the combinations you want to run it
+# if you run it on the total amount of combinations, it will take very long!
+# if fraction_of_len = 0.01, it will run on 1% of the data only. 
+fraction_of_len = 0.0001
+n_combinations = round(dim(graycodes_15)[1]*fraction_of_len)
+print(n_combinations)
+
+
+
+# loop over all the rows
+# start from 2 as we already have used the first sample above
+for (i in (2:n_combinations)){
+
+  # progress bar
+  setTxtProgressBar(pb, i)
+
+  diff = graycodes_15[i,] - graycodes_15[i-1,]
+  
+  # get indices where the observations will be exchanged
+  idx_out = which(diff == -1)
+  idx_in = which(diff == 1)
+
+  
+  x_out = law[idx_out,1]
+  y_out = law[idx_out,2]
+  x_in = law[idx_in,1]
+  y_in = law[idx_in,2]
+  
+  x_up = x - x_out + x_in
+  y_up = y - y_out + y_in
+  a_up = a - x_out**2 + x_in**2
+  b_up = b - y_out**2 + y_in**2
+  c_up = c - x_out*y_out + x_in*y_in
+  
+  updated_correlation = (c_up-x_up*y_up/n)/(sqrt(a_up-x_up**2/n)*sqrt(b_up-y_up**2/n))
+  
+  x = x_up
+  y = y_up
+  a = a_up
+  b = b_up
+  c = c_up
+  
+  corr_list = c(corr_list, c(updated_correlation, dmultinom(indices, prob = rep(1,15))))
+  
+}
+
+# track end time
+end_time = proc.time()
+
+time = end_time - start_time
+time = time[3]
+
+est_time_sec = time * (1/fraction_of_len)
+est_time_h = est_time_sec/(60*60)
+
+print(c("Estimated hours to run the whole sample: ", toString(est_time_h)))
+
+
+output = t(simplify2array(corr_list))
+colnames(output) = c("cor","weight")
+save(output, file = "law_grey_corr.Rdata")
+
+```
+
