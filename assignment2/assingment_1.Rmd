@@ -2,7 +2,10 @@
 title: "Comp Stat - Assignment 2"
 author: "Akos Engelmann, Gergely Paradi, Fabian Gallyas, Ipek Cakin, Simon Jasansky"
 date: "2023-03-21"
-output: pdf_document
+output: 
+  pdf_document:
+    number_sections: true
+bibliography: references.bib 
 ---
 
 ```{r setup, include=FALSE}
@@ -11,25 +14,22 @@ library("tidyverse")
 library("ggplot2")
 library("bootstrap")
 library("magrittr")
-
 ```
 
 
-```{r, echo = FALSE}
+```{r, include=FALSE}
 # visualize the data
 data(law)
 law %<>% add_column(observation = 1:nrow(law), .before = 1)
 ggplot(law, aes(x = LSAT, y = GPA)) +
 geom_text(aes(label = observation),
 hjust = 0, vjust = 0)
-
-print(law)
 ```
 
 
 
 # Task 0: Do the vanilla bootstrap for the distribution of the pearson correlation coefficient 
-```{r, echo = FALSE}
+```{r, include=FALSE}
 
 # calculate the correlation between the data for the original dataframe
 cor(law$GPA, law$LSAT)
@@ -57,8 +57,10 @@ hist(cor_dist_boot)
 
 Get get a dataframe with all the possible combinations
 Code inspired by: https://christofseiler.github.io/stats205/Lecture5/BootstrapPart2.html#1 
+```{r, include=FALSE}
 
-```{r, echo = FALSE}
+# load law data again
+data(law)
 # install.packages("partitions")
 library("partitions")
 
@@ -80,24 +82,27 @@ dim(comps)[2] == factorial(29)/(factorial(15)*factorial(14))
 
 
 Get an understanding how we can build a function by running the most simple example by taking the third column of the comps dataframe 
-```{r, echo = FALSE}
+```{r, include=FALSE}
 
 # define the third column of the composition as test
-indices = comps[,3]
+indices = comps[,2]
 
 # define the function that is used inside the bootstrap function
 # it creates a list of length 15, where the nth element contains i row of the original data x times, as specified in comps
+j = 1
 create_law_list = function(j) {
   matrix(rep(law[j,], indices[j]), ncol = 2, byrow = TRUE)
 }
 
-create_law_list(1)
+create_law_list(3)
 test_list = lapply(1:n, create_law_list)
+
 # so the inner_function returns a list of matrices
 # each element in the list, i.e. each matrix, contains as many observations of row 1-15 as specified in comps
 
 # collapse the list into one matrix with as many observations of each row as specified in comps
 l_list_new_test = do.call(rbind, test_list)
+print(l_list_new_test)
 
 # calculate correlation between the columns
 correlation = cor(unlist(l_list_new_test[,1]), unlist(l_list_new_test[,2]))
@@ -111,12 +116,14 @@ dmultinom(indices, prob = rep(1,15))
 
 
 Do the actual implementation of the exhaustive enumeration without parallelizing
-```{r, echo = FALSE}
-
+```{r, include=FALSE}
 ### define function for bootstrap ### 
 
 # i here is each column of the composition matrix
 bootstrap = function(i) {
+  
+  setTxtProgressBar(pb, i)
+  
   # access the ith column of the composition matrix
   indices = comps[,i]
 
@@ -134,15 +141,26 @@ bootstrap = function(i) {
   # the weight is calculated by the multinomial probability of observing this set of the index
   c(correlation, dmultinom(indices, prob = rep(1,15)))
 }
+```
 
-### run the bootstrap ###
+
+# Run the bootstrap if the file does not yet exist
+```{r, include=FALSE}
 
 # define on how many of the combinations you want to run it
 # if you run it on the total amount of combinations, it will take very long!
 # if fraction_of_len = 0.01, it will run on 1% of the data only. 
-fraction_of_len = 0.0001
+fraction_of_len = 0.05
 n_combinations = round(comp_len*fraction_of_len)
 print(n_combinations)
+
+# Initializes the progress bar
+pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
+                     max = n_combinations, # Maximum value of the progress bar
+                     style = 3,    # Progress bar style (also available style = 1 and style = 2)
+                     width = 50,   # Progress bar width. Defaults to getOption("width")
+                     char = "=")   # Character used to create the bar
+
 
 # track present time 
 start_time = proc.time()
@@ -161,21 +179,71 @@ est_time_h = est_time_sec/(60*60)
 
 print(c("Estimated hours to run the whole sample: ", toString(est_time_h)))
 
-
 output = t(simplify2array(output))
 colnames(output) = c("cor","weight")
 save(output, file = "law_enum_corr.Rdata")
+hist(output)
 
 ```
 
-Do the implementation of the exhaustive enumeration WITH parallelizing
-```{r, echo = FALSE}
-# TBD!
+
+
+```{r, include=FALSE}
+
+# Does not work yet!!
+# This code will probably only work on windows!
+
+library(parallel)
+# install.packages("doParallel")
+# install.packages("snow")
+# library("doParallel")
+library("snow")
+
+
+no_cores <- detectCores(logical = TRUE)  # returns the number of available hardware threads, and if it is FALSE, returns the number of physical cores
+
+# allocate this number of available cores to the R and provide a number of clusters and then register those clusters. 
+# If you specify all the cores to the R, you may have trouble doing anything else on your machine, so it is better not to use all the resources in R.
+cl <- makeCluster(no_cores-1)  
+
+
+if(!file.exists("enumData.Rdata")) {
+  
+  ptm = proc.time()
+  
+  # Initializes the progress bar
+  pb <- txtProgressBar(min = 0, max = comp_len, style = 3, width = 50, char = "=")
+  
+  # track present time 
+  start_time = proc.time()
+  
+  # run the boostrap
+  output = clusterApply(cl, 1:comp_len, bootstrap)
+
+  end_time = proc.time()
+
+  enumData = t(simplify2array(enumData))
+  colnames(enumData) = c("cor","weight")
+  save(enumData,file = "enumData.Rdata") 
+  
+  # track end time
+  time = end_time - start_time
+  time = time[3]
+  est_time_h = est_time_sec/(60*60)
+  
+  print(c("Estimated hours to run the whole sample: ", toString(est_time_h)))
+ 
+} else {
+  load("enumData.Rdata")
+}
+
+stopCluster(cl)
+
 ```
 
 
 Run the exhaustive enumeration with the help of grey codes
-```{r, echo = FALSE}
+```{r, include=FALSE}
 
 # check if the compositions only differ in one place
 comps[,1:10]
@@ -194,7 +262,7 @@ sum_abs
 
 Cleaned code for creating gray codes for combinations
 Adapted from https://statweb.stanford.edu/~cgates/PERSI/papers/graycodes.pdf 
-```{r}
+```{r, include=FALSE}
 
 # gray is the function that will be called multiple times
 # x is the current pi
@@ -312,8 +380,8 @@ callgray <- function(n = 5, k = 5, point = c(0, 0, 0), x = 0, pasapas = FALSE) {
 
 
 Run the algorithm and create the grey codes for combinations
-```{r}
-if(!file.exists("graycodes_15.Rdata")) {
+```{r, include=FALSE}
+if(!file.exists("graycodes15.Rdata")) {
 graycodes_15 = callgray(n = 15, k = 15, point = c(0, 0, 0), x = 0)
 save(graycodes_15, file = "graycodes15.Rdata")
 } else {
@@ -324,11 +392,12 @@ save(graycodes_15, file = "graycodes15.Rdata")
 
 Run the correlation with the gray code combination
 This should be faster
-```{r}
+
+Define the function
+```{r, include=FALSE}
 #exact formulation is from : https://stats.stackexchange.com/questions/410468/online-update-of-pearson-coefficient
 
-
-n = dim(graycodes_15)[1]
+n = 15
 
 # create first sample
 create_sample = function(j) {
@@ -349,71 +418,84 @@ a = sum(sample$X1**2)
 b = sum(sample$X2**2)
 c = sum(sample$X1*sample$X2)
   
-correlation = (c-x*y/n)/(sqrt(a-x**2/n)*sqrt(b-y**2/n))
+correlation = (c - ((x*y)/n)) / ( sqrt(a - ((x**2)/n)) * sqrt(b - (y**2/n)))
 
-corr_list = list()
-corr_list = c(corr_list, c(correlation, dmultinom(indices, prob = rep(1,15))))
+print(c(x,y,a,b,c))
+print(correlation)
 
 
+# define on how many of the combinations you want to run it
+# if you run it on the total amount of combinations, it will take very long!
+# if fraction_of_len = 0.01, it will run on 1% of the data only. 
+fraction_of_len = 0.05
+n_combinations = round(dim(graycodes_15)[1]*fraction_of_len)
+print(n_combinations)
+
+# if you want you can set the number of combinations manually
+# n_combinations = 5
 
 # Initializes the progress bar
 pb <- txtProgressBar(min = 2,      # Minimum value of the progress bar
-                     max = dim(graycodes_15)[1], # Maximum value of the progress bar
+                     max = n_combinations, # Maximum value of the progress bar
                      style = 3,    # Progress bar style (also available style = 1 and style = 2)
                      width = 50,   # Progress bar width. Defaults to getOption("width")
                      char = "=")   # Character used to create the bar
 
 
 
-# track present time 
-start_time = proc.time()
-
-
-# define on how many of the combinations you want to run it
-# if you run it on the total amount of combinations, it will take very long!
-# if fraction_of_len = 0.01, it will run on 1% of the data only. 
-fraction_of_len = 0.0001
-n_combinations = round(dim(graycodes_15)[1]*fraction_of_len)
-print(n_combinations)
-
-
-
 # loop over all the rows
 # start from 2 as we already have used the first sample above
-for (i in (2:n_combinations)){
-
+gray_enum <- function(i){
+  
   # progress bar
   setTxtProgressBar(pb, i)
-
-  diff = graycodes_15[i,] - graycodes_15[i-1,]
   
+  diff = graycodes_15[i,] - graycodes_15[i-1,]
+
   # get indices where the observations will be exchanged
   idx_out = which(diff == -1)
   idx_in = which(diff == 1)
 
-  
   x_out = law[idx_out,1]
   y_out = law[idx_out,2]
   x_in = law[idx_in,1]
   y_in = law[idx_in,2]
   
-  x_up = x - x_out + x_in
-  y_up = y - y_out + y_in
-  a_up = a - x_out**2 + x_in**2
-  b_up = b - y_out**2 + y_in**2
-  c_up = c - x_out*y_out + x_in*y_in
+  # print(c(x_out, y_out, x_in, y_in))
+  # print(c(x,y,a,b,c))
   
-  updated_correlation = (c_up-x_up*y_up/n)/(sqrt(a_up-x_up**2/n)*sqrt(b_up-y_up**2/n))
+  x_up <- x - x_out + x_in
+  y_up <- y - y_out + y_in
+  a_up <- a - x_out**2 + x_in**2
+  b_up <- b - y_out**2 + y_in**2
+  c_up <- c - x_out*y_out + x_in*y_in
+  # print(c(x,y,a,b,c))
+
+  updated_correlation = (c_up - ((x_up*y_up)/n)) / (sqrt(a_up - ((x_up**2)/n)) * sqrt(b_up - (y_up**2/n)))
+  # print(updated_correlation)
   
-  x = x_up
-  y = y_up
-  a = a_up
-  b = b_up
-  c = c_up
   
-  corr_list = c(corr_list, c(updated_correlation, dmultinom(indices, prob = rep(1,15))))
+  # update global variables
+  assign("x", x_up, envir = .GlobalEnv)
+  assign("y", y_up, envir = .GlobalEnv)
+  assign("a", a_up, envir = .GlobalEnv)
+  assign("b", b_up, envir = .GlobalEnv)
+  assign("c", c_up, envir = .GlobalEnv)
+  
+  c(updated_correlation, dmultinom(graycodes_15[i,], prob = rep(1,15)))
   
 }
+```
+
+
+Run the function defined above if there is no output file yet
+```{r, include=FALSE}
+
+# track present time 
+start_time = proc.time()
+
+# run it
+output = lapply(2:n_combinations, gray_enum)
 
 # track end time
 end_time = proc.time()
@@ -427,9 +509,9 @@ est_time_h = est_time_sec/(60*60)
 print(c("Estimated hours to run the whole sample: ", toString(est_time_h)))
 
 
-output = t(simplify2array(corr_list))
+output = t(simplify2array(output))
 colnames(output) = c("cor","weight")
 save(output, file = "law_grey_corr.Rdata")
-
 ```
+
 
