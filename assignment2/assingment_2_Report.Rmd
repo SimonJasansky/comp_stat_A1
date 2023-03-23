@@ -61,7 +61,7 @@ To do a complete enumeration bootstrap, the number of possible arrangements of t
 However, all possible $15^{15}$ arrangements of the data also include arrangements with the same set of observations, but in a different order. These arrangements will still give the same correlation coefficient. Thus, the correlation coefficient can be calculated for each unique set of observations, and then weighted according to the number of possible arrangements of this set. 
 In our implementation of the exhaustive enumeration, we used this weighting of the potential sets, where we calculated the weight for a set of observations with the multinomial probability, i.e. the R function dmultinom(indices, prob = rep(1,15)), as also implemented in @seiler_stats. 
 
-Doing this, the number of calculations is reduced from $n^{n}$ to $2n+1 \choose n+1$, which in our case corresponds to a reduction from $15^{15} \approx 4.38 * 10^{17}$ calculations to only $ {29 \choose 14} = 77558760 \approx 7.7*10^7$ calculations.
+Doing this, the number of calculations is reduced from $n^{n}$ to $\binom{2n-1}{2n-1}$, which in our case corresponds to a reduction from $15^{15} \approx 4.38 * 10^{17}$ calculations to only \(\binom{29}{14} = 77558760 \approx 7.7*10^7\) calculations.
 
 As this number of calculations is still not feasible in the amount of time we have for this assignment and on the machines available to us, we only performed the complete enumeration bootstrap on the first 5% of total possible observation sets, in order to being able to interpolate the total runtime when using all possible observation sets. Using this 5% of the observation sets ran for 0.943 hours, which would interpolate to 18.86 hours when using all the all possible observation sets. Note that we did not parallelize the algorithm. 
 
@@ -81,6 +81,7 @@ The speedup achieved by using Gray codes depend on the size of the data set and 
 
 By using grey codes, only one observation gets exchanged with another, which allows to simply update the values and the correlation, instead of recalculating it over and over again. 
 We obtained the formula for updating the values for calculating the Pearson correlation coefficient from @stackexchange. Further, they are shown in Figures 1 and 2. 
+
 
 \begin{figure}[htpb]
     \centering
@@ -103,16 +104,17 @@ As mentioned above, running the complete enumeration procedure on all possible o
 
 # Which observation(s) do you need to remove from the sample to make the Monte Carlo and complete enumeration bootstrap look more similar?
 
-To make the two more similiar, we could get rid of the outliers, namely 1 and possibly also 11, as determined by visual inspection of the scatter plot. 
+To make the two more similiar, we could get rid of the outliers, namely 1 and possibly also 11, as determined by visual inspection of the scatter plot included in the homework assignment document.  
 
-Especially the first observation caused problems, as we usually tested the algorithms on the first 5% of possible observation sets, the first observation was typically heaviliy overrepresented (first obervation set was 15X first observation, second observation set was 14x first observation and 1x second observation, and so on). This often resulted in a negative correlation coefficient for multiple observation sets. Figure 3 shows the histogram of the correlation coefficients after running the gray code algorithm on the first 5% of observation sets. It is very clear that the negative correlation and correlation around 0 are over-represented, compared to the Monte Carlo simulation. 
 
-\begin{figure}[htpb]
-    \centering
-    \includegraphics[width=\textwidth]{histogram.png}
-    \caption{Histogram of the correlation coefficients after running the gray code algorithm on the first 5% of observation sets}
-    \label{fig3}
-\end{figure}
+
+Especially the first observation caused problems, as we usually tested the algorithms on the first 5% of possible observation sets, the first observation was typically heaviliy overrepresented (first obervation set was 15X first observation, second observation set was 14x first observation and 1x second observation, and so on). This often resulted in a negative correlation coefficient for multiple observation sets. Figure 3 shows the histogram of the correlation coefficients after running the gray code algorithm on the first 5% of observation sets, compared to the monte carlo simulation. It is very clear that the negative correlation and correlation around 0 are over-represented, compared to the Monte Carlo simulation.
+
+
+```{r, echo=FALSE,out.width="49%", out.height="20%",fig.cap="Histogram of the first 5 percent of observation sets using gray code algorithm (left), histogram of monte carlo simulation (right)",fig.show='hold',fig.align='center'}
+knitr::include_graphics(c("histogram.png","hist_mc.png"))
+```
+
 
 With the same reasoning, it could be argued that also observation 7 and 12 should be removed, although to a weaker extent. 
 @Diaconis also shows in his paper that removing the first observation removes the "bump" around 0.8 and lets the correlation coefficient peak at a bit above 0.9. 
